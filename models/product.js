@@ -6,14 +6,7 @@ const productVariantSchema = new mongoose.Schema({
   color: { type: String },
   price: { type: Number },
   stock: { type: String },
-  front: { type: String},
-  back: { type: String },
-  side: { type: String },
-  // var_images: {
-  //   front: String,
-  //   back: String,
-  //   side: String
-  // }
+  images: [{ type: String, default: [] }],
 });
 
 const productSchema = new mongoose.Schema({

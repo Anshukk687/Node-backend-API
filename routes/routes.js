@@ -6,7 +6,7 @@ const { addBanner, updateBanner, deleteBanner, getBanner, getBannerById } = requ
 const { addCategory, updateCategory, deleteCategory, getCategory, getCategoryById, getCategoryBySub } = require('../controllers/categoryController');
 const { addSubCat, updateSubCat, deleteSubCat, getSubCat, getSubCatById } = require('../controllers/subCategoryController');
 const { searchData } = require('../controllers/searchController');
-const { addContact } = require('../controllers/contactController');
+const { addContact, verified, dummy } = require('../controllers/contactController');
 const { register, login } = require('../controllers/registerController');
 
 // User Routes
@@ -60,7 +60,10 @@ router.post('/search', searchData);
 
 //Contact form dummy for flower project
 router.post('/contact', addContact);
+router.get('/verified', verified);
 router.post('/registerr', register);
 router.post('/loginn', login);
+
+router.post('/dummy', dummy);
 
 module.exports = router;

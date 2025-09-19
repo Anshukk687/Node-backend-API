@@ -11,10 +11,12 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
+    "@ngrok/ngrok": "^1.5.1",
     "bcryptjs": "^3.0.2",
     "body-parser": "^2.2.0",
     "cors": "^2.8.5",
-    "dotenv": "^16.4.7",
+    "dotenv": "^16.6.1",
+    "ejs": "^3.1.10",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.13.2",
@@ -22,5 +24,13 @@
     "nodemailer": "^6.10.0",
     "sharp": "^0.34.1",
     "slugify": "^1.6.6"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Anshukk687/Node-backend-API.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Anshukk687/Node-backend-API/issues"
+  },
+  "homepage": "https://github.com/Anshukk687/Node-backend-API#readme"
 }

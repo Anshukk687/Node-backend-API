@@ -7,6 +7,24 @@ const subCategory = require('../models/subCategory');
 
 const upload = multer();
 
+const fs = require('fs');
+const path = require('path');
+
+const deleteFile = (filePath) => {
+    if (fs.existsSync(filePath)) {
+        fs.unlink(filePath, (err) => {
+            if (err) console.error('Failed to delete file:', err);
+        });
+    }
+};
+
+const extractFilePath = (url, req) => {
+    const baseUrl = `${req.protocol}://${req.get('host')}/uploads/`;
+    const relativePath = url.replace(baseUrl, '');
+    return path.join(__dirname, '../../uploads', relativePath);
+};
+
+
 exports.addProduct = async (req, res) => {
     upload.any()(req, res, async (uploadError) => {
         if (uploadError) {
@@ -21,33 +39,36 @@ exports.addProduct = async (req, res) => {
             const fileMap = {};
             for (let i = 0; i < images.length; i++) {
                 const field = images[i].fieldname;
-                const match = field.match(/^variant_images\[(\d+)]\[(\w+)]$/);
+                const match = field.match(/^variant_images\[(\d+)]$/);
                 if (match) {
-                    const [_, index, position] = match;
-                    if (!fileMap[index]) fileMap[index] = {};
-                    fileMap[index][position] = `${req.protocol}://${req.get('host')}/uploads/${folderName}/${imageMetadata[i]}`;
+                    const index = match[1];
+                    if (!fileMap[index]) fileMap[index] = [];
+                    fileMap[index].push(`${req.protocol}://${req.get('host')}/uploads/${folderName}/${imageMetadata[i]}`);
                 } else if (field === 'image') {
                     fileMap['mainImage'] = `${req.protocol}://${req.get('host')}/uploads/${folderName}/${imageMetadata[i]}`;
                 }
             }
 
+            // Parse variants from body
             let variants = req.body.variants;
             if (typeof variants === 'string') {
                 variants = JSON.parse(variants);
             }
 
+            // Build productVariants array
             const productVariants = variants.map((variant, index) => ({
                 size: variant.size,
                 color: variant.color,
                 price: Number(variant.price),
                 stock: Number(variant.stock),
-                front: fileMap[index]?.front || null,
-                back: fileMap[index]?.back || null,
-                side: fileMap[index]?.side || null,
+                images: (fileMap[index] && fileMap[index].length > 0)
+                    ? fileMap[index]
+                    : variant.images || [],
             }));
 
             const { category_id, subcat_id, title, brand, description, rating, pricee } = req.body;
 
+            // Duplicate check
             const existingProduct = await Product.findOne({ title });
             if (existingProduct) {
                 return res.status(400).json({ message: 'Product title already exists' });
@@ -86,19 +107,20 @@ exports.updateProduct = async (req, res) => {
 
         try {
             const folderName = 'images/products';
-            const images = req.files || [];
-            const imageMetadata = images.length > 0 ? await saveBinaryFiles(images, folderName) : [];
+            const files = req.files || [];
+            const savedFilenames = files.length > 0 ? await saveBinaryFiles(files, folderName) : [];
 
+            // Map uploaded files
             const fileMap = {};
-            for (let i = 0; i < images.length; i++) {
-                const field = images[i].fieldname;
-                const match = field.match(/^variant_images\[(\d+)]\[(\w+)]$/);
-                const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${folderName}/${imageMetadata[i]}`;
+            for (let i = 0; i < files.length; i++) {
+                const field = files[i].fieldname;
+                const match = field.match(/^variant_images\[(\d+)]$/);
+                const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${folderName}/${savedFilenames[i]}`;
 
                 if (match) {
-                    const [_, index, type] = match;
-                    if (!fileMap[index]) fileMap[index] = {};
-                    fileMap[index][type] = fileUrl;
+                    const index = match[1];
+                    if (!fileMap[index]) fileMap[index] = [];
+                    fileMap[index].push(fileUrl);
                 } else if (field === 'image') {
                     fileMap.mainImage = fileUrl;
                 }
@@ -106,59 +128,82 @@ exports.updateProduct = async (req, res) => {
 
             const { id } = req.params;
             const existingProduct = await Product.findById(id);
-            if (!existingProduct) return res.status(404).json({ message: "Product not found" });
+            if (!existingProduct) {
+                return res.status(404).json({ message: "Product not found" });
+            }
 
-            // Parse variants
+            // Parse variants JSON from body
             let variants = req.body.variants;
-            if (typeof variants === 'string') variants = JSON.parse(variants);
+            if (typeof variants === 'string') {
+                variants = JSON.parse(variants);
+            }
 
             const updatedVariants = variants.map((variant, index) => {
                 const old = existingProduct.variants[index] || {};
-                const updated = {
+
+                // These are images that user wants to keep (still displayed in UI)
+                const keptOldImages = Array.isArray(variant.existingImages) ? variant.existingImages : [];
+
+                // Delete removed old images from server
+                if (Array.isArray(old.images)) {
+                    old.images.forEach((imgUrl) => {
+                        if (!keptOldImages.includes(imgUrl)) {
+                            deleteFile(extractFilePath(imgUrl, req)); // Remove deleted images
+                        }
+                    });
+                }
+
+                // Combine existing kept images with newly uploaded ones
+                const newUploaded = fileMap[index] || [];
+                const finalImages = [...keptOldImages, ...newUploaded];
+
+                return {
                     size: variant.size,
                     color: variant.color,
                     price: Number(variant.price),
                     stock: Number(variant.stock),
-                    front: variant.front || fileMap[index]?.front || null,
-                    back: variant.back || fileMap[index]?.back || null,
-                    side: variant.side || fileMap[index]?.side || null,
+                    images: finalImages
                 };
-
-                ['front', 'back', 'side'].forEach(img => {
-                    if (fileMap[index]?.[img] && old[img]) {
-                        deleteFile(extractFilePath(old[img], req));
-                    }
-                    if (variant[img] === null && old[img]) {
-                        deleteFile(extractFilePath(old[img], req));
-                        updated[img] = null;
-                    }
-                });
-
-                return updated;
             });
 
+            // Handle main image update
             let mainImage = existingProduct.image;
             if (fileMap.mainImage) {
-                deleteFile(extractFilePath(mainImage, req));
+                if (mainImage) deleteFile(extractFilePath(mainImage, req));
                 mainImage = fileMap.mainImage;
             }
 
             const { title, category_id, subcat_id, brand, description, rating, pricee } = req.body;
             const slug = slugify(title, { lower: true, strict: true });
 
-            const titleExists = await Product.findOne({ title, _id: { $ne: id } });
-            if (titleExists) {
-                return res.status(400).json({ message: 'Title already in use' });
+            // Ensure unique title
+            const existingTitle = await Product.findOne({ title, _id: { $ne: id } });
+            if (existingTitle) {
+                return res.status(400).json({ message: "Title already in use" });
             }
 
-            const updatedProduct = await Product.findByIdAndUpdate(id, {
-                title, slug, brand, category_id, subcat_id,
-                description, rating, pricee,
-                image: mainImage,
-                variants: updatedVariants
-            }, { new: true });
+            // Save updated product
+            const updatedProduct = await Product.findByIdAndUpdate(
+                id,
+                {
+                    title,
+                    slug,
+                    brand,
+                    category_id,
+                    subcat_id,
+                    description,
+                    rating,
+                    pricee,
+                    image: mainImage,
+                    variants: updatedVariants
+                },
+                { new: true }
+            );
 
-            return res.status(200).json({ message: "Product updated", product: updatedProduct });
+            return res.status(200).json({
+                message: "Product updated successfully",
+                product: updatedProduct
+            });
 
         } catch (error) {
             console.error("Update error:", error);
@@ -166,6 +211,8 @@ exports.updateProduct = async (req, res) => {
         }
     });
 };
+
+
 
 exports.deleteProduct = async (req, res) => {
     try {
