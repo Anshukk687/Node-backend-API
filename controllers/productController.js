@@ -259,9 +259,7 @@ exports.getProductId = async (req, res) => {
 exports.getProductBySlug = async (req, res) => {
     try {
         const { slug } = req.params;
-        console.log(slug);
         const getProductSlug = await Product.findOne({ slug });
-        console.log(getProductSlug);
         if (!getProductSlug) {
             return res.status(404).json({ message: "Product not found" });
         }

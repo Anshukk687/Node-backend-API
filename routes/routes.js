@@ -5,9 +5,11 @@ const { addProduct, updateProduct, deleteProduct, getProduct, getProductId, getP
 const { addBanner, updateBanner, deleteBanner, getBanner, getBannerById } = require('../controllers/bannerController');
 const { addCategory, updateCategory, deleteCategory, getCategory, getCategoryById, getCategoryBySub } = require('../controllers/categoryController');
 const { addSubCat, updateSubCat, deleteSubCat, getSubCat, getSubCatById } = require('../controllers/subCategoryController');
+const { addBlog, updateBlog, deleteBlog, getBlog, getBlogById } = require('../controllers/blogController');
 const { searchData } = require('../controllers/searchController');
 const { addContact, verified, dummy } = require('../controllers/contactController');
 const { register, login } = require('../controllers/registerController');
+const { addCartItem, updateCartItem, deleteCartItem, getCartItems, getCartItemById } = require('../controllers/cartController');
 
 // User Routes
 router.post('/register', registerUser);
@@ -53,9 +55,22 @@ router.delete('/delete-banner/:id', deleteBanner);
 router.get('/get-banner', getBanner);
 router.get('/edit-banner/:id', getBannerById);
 
+// Blog Routes
+router.post('/add-blog', addBlog);
+router.put('/update-blog/:id', updateBlog);
+router.delete('/delete-blog/:id', deleteBlog);
+router.get('/get-blog', getBlog);
+router.get('/edit-blog/:id', getBlogById);
+
 // Search Routes
 //router.get('/search/:id', searchData);
 router.post('/search', searchData);
+
+// Cart Routes
+router.post('/add-cart', addCartItem);
+router.get('/get-cart', getCartItems);
+router.put('/update-cart/:id', updateCartItem);
+router.delete('/delete-cart/:id', deleteCartItem);
 
 
 //Contact form dummy for flower project
