@@ -2,9 +2,9 @@ const CartItem = require('../models/cart');
 
 exports.addCartItem = async (req, res) => {
     try {
-        const { user_id, product_id, quantity } = req.body;
+        const { user_id, product_id, variant_id, quantity } = req.body;
 
-        if (!user_id || !product_id || !quantity) {
+        if (!user_id || !product_id || !variant_id ||!quantity) {
             return res.status(400).json({ message: "Missing required fields" });
         }
 
@@ -18,6 +18,7 @@ exports.addCartItem = async (req, res) => {
             const newCart = new CartItem({
                 user_id,
                 product_id,
+                variant_id,
                 quantity,
             });
             await newCart.save();

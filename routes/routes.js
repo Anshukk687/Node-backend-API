@@ -9,7 +9,8 @@ const { addBlog, updateBlog, deleteBlog, getBlog, getBlogById } = require('../co
 const { searchData } = require('../controllers/searchController');
 const { addContact, verified, dummy } = require('../controllers/contactController');
 const { register, login } = require('../controllers/registerController');
-const { addCartItem, updateCartItem, deleteCartItem, getCartItems, getCartItemById } = require('../controllers/cartController');
+const { addCartItem, updateCartItem, deleteCartItem, getCartItems } = require('../controllers/cartController');
+const { addWishlistItem, deleteWishlistItem, getWishlistItems } = require('../controllers/wishlistController');
 
 // User Routes
 router.post('/register', registerUser);
@@ -72,6 +73,10 @@ router.get('/get-cart', getCartItems);
 router.put('/update-cart/:id', updateCartItem);
 router.delete('/delete-cart/:id', deleteCartItem);
 
+// Wishlist Routes
+router.post('/add-wishlist', addWishlistItem);
+router.get('/get-wishlist', getWishlistItems);
+router.delete('/delete-wishlist/:productId', deleteWishlistItem);
 
 //Contact form dummy for flower project
 router.post('/contact', addContact);
